@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 文档内联摘要与播客原型</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* 隐藏横向滚动条以获得原生的清爽视觉 */
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-gray-900">
+  <div id="root"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+      }
+    }
+  </script>
+
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { 
+      Sparkles, ChevronDown, ChevronUp, Keyboard, Plus, ListTodo,
+      Wifi, Battery, Signal, X, Headphones
+    } from 'lucide-react';
+
+    function App() {
+      // --- 状态管理 ---
+      const [isAiPanelOpen, setIsAiPanelOpen] = useState(true); // 默认打开AI面板以便演示
+      const [isSummaryInserted, setIsSummaryInserted] = useState(false); // 文档中是否已插入摘要
+      const [isSummaryCollapsed, setIsSummaryCollapsed] = useState(false); // 摘要是否处于收折状态
+      const [isPlaying, setIsPlaying] = useState(false); // 新增：播客播放状态
+      const [toastMsg, setToastMsg] = useState(''); // Toast 提示信息
+
+      // --- 数据管理 (仅展示，不可编辑) ---
+      const summaryData = {
+        tldr: "Q3营收超预期增长25%，但新用户留存微降。Q4战略核心将全面转向海外市场，重点发力东南亚本地化运营。"
+      };
+
+      // --- 交互处理函数 ---
+      const showToast = (msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(''), 3000);
+      };
+
+      const handleSummarizeClick = () => {
+        showToast('✨ 正在生成摘要...');
+        setTimeout(() => {
+          setIsSummaryInserted(true);
+          setIsSummaryCollapsed(false); // 确保生成时是展开状态
+          setIsAiPanelOpen(false);      // 自动收起面板
+          showToast('✅ 摘要已生成并插入');
+        }, 600);
+      };
+
+      const handlePodcastClick = (e) => {
+        e.stopPropagation(); // 防止触发折叠区域点击
+        if (isPlaying) {
+          setIsPlaying(false);
+          showToast('⏸️ 已暂停播客');
+        } else {
+          setIsPlaying(true);
+          showToast('🎧 正在为您朗读摘要...');
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6 font-sans">
+          {/* 注入音频波纹动画样式 */}
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes eq-play {
+              0%, 100% { height: 4px; }
+              50% { height: 14px; }
+            }
+            .eq-bar {
+              width: 2.5px;
+              background-color: currentColor;
+              border-radius: 2px;
+              animation: eq-play 0.9s infinite ease-in-out;
+            }
+            .eq-bar:nth-child(1) { animation-delay: 0s; }
+            .eq-bar:nth-child(2) { animation-delay: 0.2s; }
+            .eq-bar:nth-child(3) { animation-delay: 0.4s; }
+          `}} />
+
+          {/* 模拟移动端容器 */}
+          <div className="w-full max-w-[400px] h-[800px] bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col relative border-[8px] border-gray-800">
+            
+            {/* iOS 状态栏模拟 */}
+            <div className="flex justify-between items-center px-6 pt-3 pb-2 text-gray-900 z-40 bg-white/80 backdrop-blur-md absolute top-0 w-full">
+              <span className="text-sm font-semibold">9:41</span>
+              <div className="flex items-center space-x-1.5">
+                <Signal className="w-4 h-4" />
+                <Wifi className="w-4 h-4" />
+                <Battery className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* ================= [ 底层：文档阅读区 ] ================= */}
+            <div className="flex-1 overflow-y-auto bg-gray-50 pt-16 pb-24 px-5">
+              {/* 文档标题 */}
+              <h1 className="text-2xl font-bold text-gray-900 mb-6 leading-tight mt-4">
+                Q3产品复盘与Q4海外市场开拓规划
+              </h1>
+
+              {/* 🌟 插入的 AI 摘要区块 */}
+              <div className={`transition-all duration-500 origin-top overflow-hidden ${isSummaryInserted ? 'opacity-100 mb-6 scale-100' : 'max-h-0 opacity-0 mb-0 scale-95'}`}>
+                
+                {/* 动态边框：展开时炫彩，收折时极简灰边 */}
+                <div className={`relative transition-colors duration-500 rounded-xl shadow-sm ${
+                  isSummaryCollapsed 
+                    ? 'bg-gray-200 p-[1px]' 
+                    : 'bg-gradient-to-br from-blue-400 via-purple-400 to-orange-300 p-[1.5px]'
+                }`}>
+                  
+                  {/* 内部卡片：动态内边距 */}
+                  <div className={`bg-white rounded-[10px] relative transition-all duration-500 overflow-hidden ${
+                    isSummaryCollapsed ? 'p-2 flex items-center justify-between cursor-pointer hover:bg-gray-50' : 'p-4'
+                  }`}
+                    onClick={() => isSummaryCollapsed && setIsSummaryCollapsed(false)} // 收起时点击整行可展开
+                  >
+                    
+                    {/* 头部：标题与操作区 */}
+                    <div className={`flex items-center justify-between ${isSummaryCollapsed ? 'w-full' : 'mb-3'}`}>
+                      
+                      {/* 左侧：标题与状态预览 */}
+                      <div className="flex items-center flex-1 min-w-0 pr-3">
+                        <Sparkles className={`flex-shrink-0 w-4 h-4 ${isSummaryCollapsed ? 'text-gray-400' : 'text-blue-600'}`} />
+                        {!isSummaryCollapsed ? (
+                          <span className="ml-1.5 text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+                            AI 摘要
+                          </span>
+                        ) : (
+                          // 收折时的迷你预览文本
+                          <span className="ml-2 text-xs text-gray-500 truncate font-medium">
+                            Q3营收超预期增长25%，但新用户...
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* 右侧：功能按钮组 */}
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        {/* 播客入口：展开时大按钮，收折时紧凑小按钮 */}
+                        <button 
+                          onClick={handlePodcastClick}
+                          className={`flex items-center justify-center transition-colors duration-300 ${
+                            isSummaryCollapsed 
+                              ? `p-1.5 rounded-md ${isPlaying ? 'bg-blue-600 text-white shadow-inner' : 'bg-blue-50/50 text-blue-600 hover:bg-blue-100'}` 
+                              : `px-2.5 py-1.5 rounded-lg space-x-1.5 ${isPlaying ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-50/80 text-blue-600 hover:bg-blue-100'}`
+                          }`}
+                          title={isPlaying ? "暂停" : "收听播客"}
+                        >
+                          {/* 动态图标切换 */}
+                          {isPlaying ? (
+                            <div className="flex items-center justify-center space-x-[2px] h-3.5 w-3.5">
+                              <div className="eq-bar"></div>
+                              <div className="eq-bar"></div>
+                              <div className="eq-bar"></div>
+                            </div>
+                          ) : (
+                            <Headphones className="w-3.5 h-3.5" />
+                          )}
+                          
+                          {!isSummaryCollapsed && (
+                            <span className="text-xs font-semibold">{isPlaying ? '播放中' : '收听'}</span>
+                          )}
+                        </button>
+
+                        {/* 收折/展开控制 */}
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setIsSummaryCollapsed(!isSummaryCollapsed); }} 
+                          className={`p-1.5 rounded-md transition-colors ${
+                            isSummaryCollapsed ? 'text-gray-400 hover:bg-gray-100' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {isSummaryCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 内容区：加入高度和透明度动画 */}
+                    <div className={`transition-all duration-300 origin-top overflow-hidden ${
+                      isSummaryCollapsed ? 'max-h-0 opacity-0 mt-0' : 'max-h-[800px] opacity-100 mt-1'
+                    }`}>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-gray-800 font-medium leading-relaxed">
+                            {summaryData.tldr}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              {/* 文档正文占位 */}
+              <div className="space-y-4 text-gray-600 text-[15px] leading-relaxed">
+                <p>在刚刚过去的第三季度中，我们的核心产品线表现强劲。得益于七月份推出的“夏日裂变”活动，整体活跃用户数突破了历史新高。从财务数据来看，Q3 整体营收同比增长 25%，超出了我们上个季度末制定的预期目标。</p>
+                <p>然而，在快速增长的背后，我们也捕捉到了一些需要警惕的数据信号。根据数据分析组的初步报告，九月份新获取的用户的次月留存率相较于行业大盘出现了约 5% 的轻微下滑。</p>
+                <p>展望 Q4，国内市场的获客成本正在急剧攀升，ROI 逐渐趋近临界值。因此，管理层决定将未来的增长引擎寄托于海外市场。东南亚地区凭借其庞大的人口基数和逐渐成熟的移动互联网基础设施，将成为我们出海的第一站。</p>
+              </div>
+            </div>
+
+            {/* 悬浮球 (当面板收起时显示) */}
+            <div 
+              className={`absolute bottom-8 right-5 z-30 transition-all duration-300 ${!isAiPanelOpen ? 'scale-100 opacity-100 translate-y-0' : 'scale-50 opacity-0 translate-y-10 pointer-events-none'}`}
+            >
+              <button 
+                onClick={() => setIsAiPanelOpen(true)}
+                className="w-14 h-14 bg-gray-900 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-gray-800 active:scale-95 transition-all ring-4 ring-gray-900/10"
+              >
+                <Sparkles className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* 全局 Toast 提示 */}
+            <div className={`absolute top-20 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 pointer-events-none ${toastMsg ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+              <div className="bg-gray-800/90 backdrop-blur-sm text-white px-4 py-2.5 rounded-full text-sm font-medium shadow-lg whitespace-nowrap">
+                {toastMsg}
+              </div>
+            </div>
+
+            {/* ================= [ 上层：AI 助手浮层面板 ] ================= */}
+            {/* 背景遮罩 */}
+            <div 
+              className={`absolute inset-0 bg-black/40 z-40 transition-opacity duration-300 ${isAiPanelOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+              onClick={() => setIsAiPanelOpen(false)}
+            ></div>
+
+            <div 
+              className={`absolute bottom-0 left-0 right-0 bg-white z-50 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-transform duration-500 flex flex-col ${
+                isAiPanelOpen ? 'translate-y-0 h-[88%]' : 'translate-y-full h-[88%]'
+              }`}
+              style={{ transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)' }}
+            >
+              {/* 面板 Header */}
+              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl shrink-0">
+                <div className="flex items-center space-x-1 px-2 py-1 rounded-md">
+                  <h2 className="text-base font-semibold text-gray-800">AI文档助手</h2>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </div>
+                <button onClick={() => setIsAiPanelOpen(false)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* 首页默认态 */}
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 px-6 pt-8 pb-4 overflow-y-auto">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                    Hi, 有什么可以帮你?
+                  </h1>
+                  <p className="text-sm text-gray-500 mb-8 flex items-center">
+                    你似乎在浏览<span className="text-gray-800 font-medium mx-1">《Q3产品复盘...》</span>，我可以帮你
+                  </p>
+
+                  {/* 推荐 Prompt */}
+                  <div className="space-y-3">
+                    <button className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-sm text-gray-700 transition-colors">
+                      根据文档内容提供3个关键洞察
+                    </button>
+                    <button className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-sm text-gray-700 transition-colors">
+                      提取文档中的所有核心数据指标
+                    </button>
+                    <button className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-sm text-gray-700 transition-colors">
+                      加粗所有提及的海外国家/地区名称
+                    </button>
+                  </div>
+                </div>
+
+                {/* 底部功能区 */}
+                <div className="px-5 pb-8 pt-2 bg-gradient-to-t from-white via-white to-transparent shrink-0">
+                  <div className="flex items-center space-x-3 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+                    <button 
+                      onClick={handleSummarizeClick}
+                      className="flex-shrink-0 flex items-center space-x-1.5 px-4 py-2 bg-white border border-gray-200 shadow-sm rounded-full active:scale-95 transition-transform"
+                    >
+                      <Sparkles className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-gray-700">总结</span>
+                    </button>
+                    <button className="flex-shrink-0 flex items-center space-x-1.5 px-4 py-2 bg-white border border-gray-200 shadow-sm rounded-full active:scale-95 transition-transform">
+                      <ListTodo className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">提取待办</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-white border border-gray-200 shadow-sm rounded-full p-1.5 h-12">
+                    <button className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
+                      <Keyboard className="w-4 h-4" />
+                    </button>
+                    <div className="flex-1 flex justify-center items-center cursor-pointer text-gray-400 font-medium text-sm">
+                      按住说话...
+                    </div>
+                    <button className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Home Indicator */}
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gray-300 rounded-full z-50 pointer-events-none"></div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
